@@ -285,7 +285,9 @@ async function yandexDiskRequest(path, { method = "GET", params, headers, body, 
     } else if (/conflict/i.test(message) || response.status === 409) {
       message = "На Яндекс Диске возник конфликт при сохранении данных.";
     }
-    throw new Error(message);
+    const requestError = new Error(message);
+    requestError.status = response.status;
+    throw requestError;
   }
 
   if (raw) return response;
@@ -307,7 +309,7 @@ async function ensureYandexFolder(folderPath) {
         params: { path: current },
       });
     } catch (error) {
-      if (!(error instanceof Error) || !/уже существует|exists|Conflict/i.test(error.message)) {
+      if (!(error instanceof Error) || (error.status !== 409 && !/уже существует|exists|Conflict/i.test(error.message))) {
         throw error;
       }
     }
