@@ -1,0 +1,24 @@
+{
+  "name": "Трекер тренировок",
+  "short_name": "Тренировки",
+  "description": "Офлайн-приложение для ведения тренировок в тренажерном зале.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4efe5",
+  "theme_color": "#173226",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
