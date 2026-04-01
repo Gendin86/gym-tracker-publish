@@ -401,17 +401,18 @@ async function pruneYandexBackups() {
   const backups = await loadYandexBackups();
   const staleBackups = backups.slice(MAX_YANDEX_BACKUPS);
 
-  await Promise.all(staleBackups.map((item) => {
-    return yandexDiskRequest("/resources", {
+  for (const item of staleBackups) {
+    await yandexDiskRequest("/resources", {
       method: "DELETE",
       params: {
         path: item.path,
         permanently: "true",
+        force_async: "false",
       },
     }).catch((error) => {
       console.warn("Не удалось удалить старую резервную копию", error);
     });
-  }));
+  }
 
   if (staleBackups.length) {
     await loadYandexBackups();
@@ -1176,7 +1177,7 @@ async function handleCloudRestoreRequest() {
 async function refreshYandexBackups() {
   try {
     await saveYandexDiskSettingsFromModal();
-    await loadYandexBackups();
+    await pruneYandexBackups();
     renderModal();
   } catch (error) {
     alert(error instanceof Error ? error.message : "Не удалось получить список резервных копий.");
