@@ -165,6 +165,7 @@ function createDefaultYandexDiskConfig() {
     expiresAt: "",
     lastSyncAt: "",
     lastBackupName: "",
+    lastSyncError: "",
     authPromptShown: false,
   };
 }
@@ -341,6 +342,7 @@ async function uploadBackupToYandexDisk() {
   await saveYandexDiskConfig({
     lastSyncAt: new Date().toISOString(),
     lastBackupName: fileName,
+    lastSyncError: "",
   });
 
   return fileName;
@@ -1097,6 +1099,8 @@ async function handlePostWorkoutSync() {
       await uploadBackupToYandexDisk();
       await loadYandexBackups();
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Не удалось сохранить резервную копию в Яндекс Диск.";
+      await saveYandexDiskConfig({ lastSyncError: message });
       console.warn("Silent Yandex Disk sync failed", error);
     }
     return;
@@ -1498,6 +1502,9 @@ function renderModal() {
           ${isConnected
             ? `
               <div class="stack">
+                ${state.yandexDisk.lastSyncError
+                  ? `<div class="item"><p class="muted">Последняя синхронизация не выполнена: ${escapeHtml(state.yandexDisk.lastSyncError)}</p></div>`
+                  : ""}
                 ${backupsMarkup}
               </div>
               <div class="row-wrap equal-actions">
