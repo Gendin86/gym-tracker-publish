@@ -49,6 +49,12 @@ function bindGlobalEvents() {
   });
 
   installBtn.addEventListener("click", async () => {
+    if (installBtn.dataset.mode === "ios-help") {
+      state.modal = { type: "install-help" };
+      renderModal();
+      return;
+    }
+
     if (!state.deferredPrompt) return;
     state.deferredPrompt.prompt();
     await state.deferredPrompt.userChoice;
@@ -59,8 +65,16 @@ function bindGlobalEvents() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     state.deferredPrompt = event;
+    installBtn.dataset.mode = "prompt";
+    installBtn.textContent = "Установить";
     installBtn.classList.remove("hidden");
   });
+
+  if (shouldShowIosInstallHelp()) {
+    installBtn.dataset.mode = "ios-help";
+    installBtn.textContent = "На экран Домой";
+    installBtn.classList.remove("hidden");
+  }
 
   importInput.addEventListener("change", importBackup);
   importTxtInput.addEventListener("change", importExerciseLibraryFromTxt);
@@ -1495,7 +1509,7 @@ function renderModal() {
                 ${state.yandexDisk.lastSyncError
                   ? `<div class="item"><p class="muted">Последняя синхронизация не выполнена: ${escapeHtml(state.yandexDisk.lastSyncError)}</p></div>`
                   : ""}
-                <div class="item"><p class="muted">Нажмите «Восстановить», скачайте резервную копию и затем выберите этот файл для загрузки в приложение.</p></div>
+                <div class="item"><p class="muted">Нажмите «Восстановить», после чего откроется пошаговое окно: сначала скачайте резервную копию, затем выберите скачанный файл для загрузки в приложение.</p></div>
                 ${backupsMarkup}
               </div>
               <div class="row-wrap equal-actions">
@@ -1552,6 +1566,32 @@ function renderModal() {
       if (event.target === event.currentTarget) closeModal();
     });
     modalRoot.querySelector('[data-action="connect-yandex-disk"]').addEventListener("click", connectYandexDisk);
+  }
+
+  if (state.modal.type === "install-help") {
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop" data-action="close-backdrop">
+        <section class="modal-card">
+          <div class="title-row">
+            <h3>Установка на iPhone</h3>
+            <button class="ghost square" data-action="close-modal" type="button">X</button>
+          </div>
+          <div class="item stack compact-gap">
+            <span class="muted">1. Нажмите кнопку «Поделиться» в Safari.</span>
+            <span class="muted">2. Выберите «На экран Домой».</span>
+            <span class="muted">3. Подтвердите добавление приложения.</span>
+          </div>
+          <button class="primary full" data-action="close-modal" type="button">Понятно</button>
+        </section>
+      </div>
+    `;
+
+    modalRoot.querySelectorAll('[data-action="close-modal"]').forEach((button) => {
+      button.addEventListener("click", closeModal);
+    });
+    modalRoot.querySelector('[data-action="close-backdrop"]').addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeModal();
+    });
   }
 
   if (state.modal.type === "restore-import-guide") {
@@ -1654,6 +1694,14 @@ function getDateTimeParts(value) {
     minute: map.minute,
     second: map.second,
   };
+}
+
+function shouldShowIosInstallHelp() {
+  const ua = navigator.userAgent || "";
+  const isIos = /iPhone|iPad|iPod/i.test(ua);
+  const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|YaBrowser/i.test(ua);
+  const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone;
+  return Boolean(isIos && isSafari && !isStandalone);
 }
 
 function formatDuration(minutes) {
