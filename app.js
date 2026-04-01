@@ -1138,13 +1138,10 @@ async function refreshYandexBackups() {
 }
 
 async function restoreYandexBackup(path) {
-  const confirmed = confirm("Скачать резервную копию с Яндекс Диска и затем выбрать файл для восстановления?");
-  if (!confirmed) return;
-
   try {
     await restoreBackupFromYandexDisk(path);
-    closeModal();
-    importInput.click();
+    state.modal = { type: "restore-import-guide" };
+    renderModal();
   } catch (error) {
     alert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию.");
   }
@@ -1560,6 +1557,40 @@ function renderModal() {
       if (event.target === event.currentTarget) closeModal();
     });
     modalRoot.querySelector('[data-action="connect-yandex-disk"]').addEventListener("click", connectYandexDisk);
+  }
+
+  if (state.modal.type === "restore-import-guide") {
+    modalRoot.innerHTML = `
+      <div class="modal-backdrop" data-action="close-backdrop">
+        <section class="modal-card">
+          <div class="title-row">
+            <h3>Завершите восстановление</h3>
+            <button class="ghost square" data-action="close-modal" type="button">X</button>
+          </div>
+          <div class="item stack compact-gap">
+            <strong>Что делать дальше</strong>
+            <span class="muted">1. Дождитесь, пока браузер скачает резервную копию.</span>
+            <span class="muted">2. Нажмите кнопку ниже.</span>
+            <span class="muted">3. Выберите только что скачанный JSON-файл.</span>
+          </div>
+          <div class="row-wrap equal-actions">
+            <button class="primary" data-action="pick-import-backup" type="button">Выбрать скачанный файл</button>
+            <button class="ghost" data-action="close-modal" type="button">Позже</button>
+          </div>
+        </section>
+      </div>
+    `;
+
+    modalRoot.querySelectorAll('[data-action="close-modal"]').forEach((button) => {
+      button.addEventListener("click", closeModal);
+    });
+    modalRoot.querySelector('[data-action="close-backdrop"]').addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeModal();
+    });
+    modalRoot.querySelector('[data-action="pick-import-backup"]').addEventListener("click", () => {
+      closeModal();
+      importInput.click();
+    });
   }
 
   modalRoot.querySelectorAll('[data-action="set-group-filter"]').forEach((button) => {
