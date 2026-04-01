@@ -6,6 +6,7 @@ const YANDEX_DISK_API_BASE = "https://cloud-api.yandex.net/v1/disk";
 const YANDEX_CLIENT_ID = "58b25467f55b45378ba1f29efea3d956";
 const DEFAULT_YANDEX_BACKUP_FOLDER = "app:/gym-tracker-backups";
 const APP_TIME_ZONE = "Europe/Moscow";
+const MAX_YANDEX_BACKUPS = 3;
 const EXERCISE_GROUPS = ["Грудь", "Спина", "Ноги", "Другое"];
 
 const state = {
@@ -366,6 +367,8 @@ async function uploadBackupToYandexDisk() {
     lastSyncError: "",
   });
 
+  await pruneYandexBackups();
+
   return fileName;
 }
 
@@ -392,6 +395,27 @@ async function loadYandexBackups() {
 
   state.yandexBackups = items;
   return items;
+}
+
+async function pruneYandexBackups() {
+  const backups = await loadYandexBackups();
+  const staleBackups = backups.slice(MAX_YANDEX_BACKUPS);
+
+  await Promise.all(staleBackups.map((item) => {
+    return yandexDiskRequest("/resources", {
+      method: "DELETE",
+      params: {
+        path: item.path,
+        permanently: "true",
+      },
+    }).catch((error) => {
+      console.warn("Не удалось удалить старую резервную копию", error);
+    });
+  }));
+
+  if (staleBackups.length) {
+    await loadYandexBackups();
+  }
 }
 
 async function restoreBackupFromYandexDisk(remotePath, targetWindow = null) {
@@ -1604,6 +1628,7 @@ function renderModal() {
 
   if (state.modal.type === "restore-import-guide") {
     const remotePath = state.modal.remotePath;
+    const showIosDownloadHint = isIosSafari();
     modalRoot.innerHTML = `
       <div class="modal-backdrop" data-action="close-backdrop">
         <section class="modal-card">
@@ -1614,7 +1639,9 @@ function renderModal() {
           <div class="item stack compact-gap">
             <strong>Что делать дальше</strong>
             <span class="muted">1. Нажмите «Скачать копию».</span>
-            <span class="muted">2. Дождитесь, пока браузер скачает резервную копию.</span>
+            ${showIosDownloadHint
+              ? '<span class="muted">2. На iPhone файл откроется в Safari. Нажмите «Поделиться» и сохраните его в «Файлы».</span>'
+              : '<span class="muted">2. Дождитесь, пока браузер скачает резервную копию.</span>'}
             <span class="muted">3. Нажмите «Выбрать скачанный файл» и укажите этот JSON-файл.</span>
           </div>
           <div class="row-wrap equal-actions">
@@ -1717,6 +1744,13 @@ function shouldShowIosInstallHelp() {
 
 function isStandaloneApp() {
   return Boolean(window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone);
+}
+
+function isIosSafari() {
+  const ua = navigator.userAgent || "";
+  const isIos = /iPhone|iPad|iPod/i.test(ua);
+  const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|YaBrowser/i.test(ua);
+  return Boolean(isIos && isSafari);
 }
 
 function formatDuration(minutes) {
