@@ -627,6 +627,16 @@ function bindWorkoutEvents() {
     });
   });
 
+  app.querySelectorAll("[data-action='toggle-workout-entry']").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const entry = state.activeSession.entries.find((item) => item.exerciseId === button.dataset.exerciseId);
+      if (!entry) return;
+      entry.collapsed = !entry.collapsed;
+      await persistActiveSession();
+      renderWorkout();
+    });
+  });
+
   app.querySelectorAll("[data-action='remove-set']").forEach((button) => {
     button.addEventListener("click", async () => {
       const entry = state.activeSession.entries.find((item) => item.exerciseId === button.dataset.exerciseId);
@@ -775,39 +785,52 @@ function renderWorkoutExercise(entry) {
   const lastHistory = findExerciseHistory(entry.exerciseId);
   const bestSet = findExerciseBest(entry.exerciseId);
   const exerciseGroup = getExercise(entry.exerciseId)?.group || "Другое";
+  const isCollapsed = Boolean(entry.collapsed);
+  const validSets = entry.sets.filter(hasSetData);
 
   return `
-    <article class="card stack">
+    <article class="card stack ${isCollapsed ? "collapsed-workout-card" : ""}">
       <div class="title-row">
         <div class="stack compact-gap">
           <h3>${escapeHtml(entry.exerciseName)}</h3>
           <span class="badge">${exerciseGroup}</span>
         </div>
         <div class="row-wrap compact-row">
+          <button class="ghost" data-action="toggle-workout-entry" data-exercise-id="${entry.exerciseId}" type="button">${isCollapsed ? "Развернуть" : "Свернуть"}</button>
           ${lastHistory ? `<button class="ghost" data-action="copy-history" data-exercise-id="${entry.exerciseId}" type="button">Копировать прошлый раз</button>` : ""}
           <button class="danger" data-action="remove-workout-exercise" data-exercise-id="${entry.exerciseId}" type="button">Удалить упражнение</button>
         </div>
       </div>
+      ${isCollapsed
+        ? `
+          <div class="item summary-inline" id="summary-${entry.exerciseId}">
+            ${renderExerciseSummary(entry)}
+          </div>
+          <div class="item stack compact-gap">
+            <span class="muted">${validSets.length ? validSets.map((set) => `${set.weight || 0} кг x ${set.reps || 0}`).join(", ") : "Подходы пока не заполнены."}</span>
+          </div>
+        `
+        : `
+          <div class="exercise-history">
+            ${
+              lastHistory
+                ? `
+                  <p><strong>Прошлый раз:</strong> ${formatDate(lastHistory.startedAt)}</p>
+                  <p class="muted">${lastHistory.sets.map((set) => `${set.weight || 0} кг x ${set.reps || 0}`).join(", ")}</p>
+                `
+                : '<p class="muted">Истории пока нет. Это первое выполнение упражнения.</p>'
+            }
+            ${bestSet ? `<p class="muted"><strong>Лучший подход:</strong> ${formatSetShort(bestSet)}</p>` : ""}
+          </div>
 
-      <div class="exercise-history">
-        ${
-          lastHistory
-            ? `
-              <p><strong>Прошлый раз:</strong> ${formatDate(lastHistory.startedAt)}</p>
-              <p class="muted">${lastHistory.sets.map((set) => `${set.weight || 0} кг x ${set.reps || 0}`).join(", ")}</p>
-            `
-            : '<p class="muted">Истории пока нет. Это первое выполнение упражнения.</p>'
-        }
-        ${bestSet ? `<p class="muted"><strong>Лучший подход:</strong> ${formatSetShort(bestSet)}</p>` : ""}
-      </div>
-
-      <div class="set-list">
-        ${entry.sets.map((set, index) => renderSetRow(entry.exerciseId, set, index)).join("") || renderEmpty("Добавьте первый подход.")}
-      </div>
-      <div class="item summary-inline" id="summary-${entry.exerciseId}">
-        ${renderExerciseSummary(entry)}
-      </div>
-      <button class="secondary full" data-action="add-set" data-exercise-id="${entry.exerciseId}" type="button">Добавить подход</button>
+          <div class="set-list">
+            ${entry.sets.map((set, index) => renderSetRow(entry.exerciseId, set, index)).join("") || renderEmpty("Добавьте первый подход.")}
+          </div>
+          <div class="item summary-inline" id="summary-${entry.exerciseId}">
+            ${renderExerciseSummary(entry)}
+          </div>
+          <button class="secondary full" data-action="add-set" data-exercise-id="${entry.exerciseId}" type="button">Добавить подход</button>
+        `}
     </article>
   `;
 }
@@ -883,6 +906,22 @@ function createEmptySet() {
 
 function hasSetData(set) {
   return String(set.weight ?? "").trim() !== "" || String(set.reps ?? "").trim() !== "";
+}
+
+function collapseFilledWorkoutEntries(activeExerciseId = null) {
+  if (!state.activeSession) return;
+
+  state.activeSession.entries.forEach((entry) => {
+    if (entry.exerciseId === activeExerciseId) {
+      entry.collapsed = false;
+      return;
+    }
+
+    const hasFilledSets = entry.sets.some(hasSetData);
+    if (hasFilledSets) {
+      entry.collapsed = true;
+    }
+  });
 }
 
 function applyPendingFocus() {
@@ -1057,11 +1096,13 @@ async function attachExerciseToWorkout(exerciseId) {
   if (!state.activeSession) return;
   const exists = state.activeSession.entries.some((entry) => entry.exerciseId === exerciseId);
   if (exists) return;
+  collapseFilledWorkoutEntries(exerciseId);
   const firstSet = createEmptySet();
   state.activeSession.entries.push({
     exerciseId,
     exerciseName: getExercise(exerciseId)?.name ?? "Упражнение",
     sets: [firstSet],
+    collapsed: false,
   });
   state.pendingFocus = {
     exerciseId,

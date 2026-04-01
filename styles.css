@@ -218,6 +218,14 @@ input, select {
   align-items: center;
 }
 
+.collapsed-workout-card {
+  gap: 10px;
+}
+
+.collapsed-workout-card .title-row {
+  align-items: center;
+}
+
 .square {
   min-width: 46px;
   padding: 0;
