@@ -26,6 +26,7 @@ const app = document.querySelector("#app");
 const installBtn = document.querySelector("#installBtn");
 const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
 const modalRoot = document.querySelector("#modalRoot");
+const importInput = document.querySelector("#importInput");
 const importTxtInput = document.querySelector("#importTxtInput");
 
 document.addEventListener("DOMContentLoaded", init);
@@ -61,6 +62,7 @@ function bindGlobalEvents() {
     installBtn.classList.remove("hidden");
   });
 
+  importInput.addEventListener("change", importBackup);
   importTxtInput.addEventListener("change", importExerciseLibraryFromTxt);
 }
 
@@ -379,13 +381,7 @@ async function restoreBackupFromYandexDisk(remotePath) {
   const downloadMeta = await yandexDiskRequest("/resources/download", {
     params: { path: remotePath },
   });
-  const response = await fetch(downloadMeta.href);
-  if (!response.ok) {
-    throw new Error("Не удалось скачать резервную копию с Яндекс Диска.");
-  }
-
-  const data = await response.json();
-  await applyImportedBackup(data);
+  window.open(downloadMeta.href, "_blank", "noopener,noreferrer");
 }
 
 async function applyImportedBackup(data) {
@@ -1142,13 +1138,13 @@ async function refreshYandexBackups() {
 }
 
 async function restoreYandexBackup(path) {
-  const confirmed = confirm("Восстановить резервную копию из Яндекс Диска и заменить локальные данные?");
+  const confirmed = confirm("Скачать резервную копию с Яндекс Диска и затем выбрать файл для восстановления?");
   if (!confirmed) return;
 
   try {
     await restoreBackupFromYandexDisk(path);
     closeModal();
-    alert("Восстановление из Яндекс Диска завершено.");
+    importInput.click();
   } catch (error) {
     alert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию.");
   }
@@ -1507,6 +1503,7 @@ function renderModal() {
                 ${state.yandexDisk.lastSyncError
                   ? `<div class="item"><p class="muted">Последняя синхронизация не выполнена: ${escapeHtml(state.yandexDisk.lastSyncError)}</p></div>`
                   : ""}
+                <div class="item"><p class="muted">Нажмите «Восстановить», скачайте резервную копию и затем выберите этот файл для загрузки в приложение.</p></div>
                 ${backupsMarkup}
               </div>
               <div class="row-wrap equal-actions">
