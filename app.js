@@ -1138,13 +1138,8 @@ async function refreshYandexBackups() {
 }
 
 async function restoreYandexBackup(path) {
-  try {
-    await restoreBackupFromYandexDisk(path);
-    state.modal = { type: "restore-import-guide" };
-    renderModal();
-  } catch (error) {
-    alert(error instanceof Error ? error.message : "Не удалось восстановить резервную копию.");
-  }
+  state.modal = { type: "restore-import-guide", remotePath: path };
+  renderModal();
 }
 
 function downloadLibraryTemplate() {
@@ -1560,6 +1555,7 @@ function renderModal() {
   }
 
   if (state.modal.type === "restore-import-guide") {
+    const remotePath = state.modal.remotePath;
     modalRoot.innerHTML = `
       <div class="modal-backdrop" data-action="close-backdrop">
         <section class="modal-card">
@@ -1569,11 +1565,12 @@ function renderModal() {
           </div>
           <div class="item stack compact-gap">
             <strong>Что делать дальше</strong>
-            <span class="muted">1. Дождитесь, пока браузер скачает резервную копию.</span>
-            <span class="muted">2. Нажмите кнопку ниже.</span>
-            <span class="muted">3. Выберите только что скачанный JSON-файл.</span>
+            <span class="muted">1. Нажмите «Скачать копию».</span>
+            <span class="muted">2. Дождитесь, пока браузер скачает резервную копию.</span>
+            <span class="muted">3. Нажмите «Выбрать скачанный файл» и укажите этот JSON-файл.</span>
           </div>
           <div class="row-wrap equal-actions">
+            <button class="secondary" data-action="download-cloud-backup" type="button">Скачать копию</button>
             <button class="primary" data-action="pick-import-backup" type="button">Выбрать скачанный файл</button>
             <button class="ghost" data-action="close-modal" type="button">Позже</button>
           </div>
@@ -1586,6 +1583,13 @@ function renderModal() {
     });
     modalRoot.querySelector('[data-action="close-backdrop"]').addEventListener("click", (event) => {
       if (event.target === event.currentTarget) closeModal();
+    });
+    modalRoot.querySelector('[data-action="download-cloud-backup"]').addEventListener("click", async () => {
+      try {
+        await restoreBackupFromYandexDisk(remotePath);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Не удалось скачать резервную копию.");
+      }
     });
     modalRoot.querySelector('[data-action="pick-import-backup"]').addEventListener("click", () => {
       closeModal();
