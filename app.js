@@ -63,6 +63,7 @@ function bindGlobalEvents() {
   });
 
   window.addEventListener("beforeinstallprompt", (event) => {
+    if (isStandaloneApp()) return;
     event.preventDefault();
     state.deferredPrompt = event;
     installBtn.dataset.mode = "prompt";
@@ -70,7 +71,9 @@ function bindGlobalEvents() {
     installBtn.classList.remove("hidden");
   });
 
-  if (shouldShowIosInstallHelp()) {
+  if (isStandaloneApp()) {
+    installBtn.classList.add("hidden");
+  } else if (shouldShowIosInstallHelp()) {
     installBtn.dataset.mode = "ios-help";
     installBtn.textContent = "На экран Домой";
     installBtn.classList.remove("hidden");
@@ -391,11 +394,16 @@ async function loadYandexBackups() {
   return items;
 }
 
-async function restoreBackupFromYandexDisk(remotePath) {
+async function restoreBackupFromYandexDisk(remotePath, targetWindow = null) {
   const downloadMeta = await yandexDiskRequest("/resources/download", {
     params: { path: remotePath },
   });
-  window.open(downloadMeta.href, "_blank", "noopener,noreferrer");
+  if (targetWindow && !targetWindow.closed) {
+    targetWindow.location.replace(downloadMeta.href);
+    return;
+  }
+
+  window.location.href = downloadMeta.href;
 }
 
 async function applyImportedBackup(data) {
@@ -1625,9 +1633,13 @@ function renderModal() {
       if (event.target === event.currentTarget) closeModal();
     });
     modalRoot.querySelector('[data-action="download-cloud-backup"]').addEventListener("click", async () => {
+      const downloadWindow = window.open("", "_blank");
       try {
-        await restoreBackupFromYandexDisk(remotePath);
+        await restoreBackupFromYandexDisk(remotePath, downloadWindow);
       } catch (error) {
+        if (downloadWindow && !downloadWindow.closed) {
+          downloadWindow.close();
+        }
         alert(error instanceof Error ? error.message : "Не удалось скачать резервную копию.");
       }
     });
@@ -1700,8 +1712,11 @@ function shouldShowIosInstallHelp() {
   const ua = navigator.userAgent || "";
   const isIos = /iPhone|iPad|iPod/i.test(ua);
   const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|YaBrowser/i.test(ua);
-  const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone;
-  return Boolean(isIos && isSafari && !isStandalone);
+  return Boolean(isIos && isSafari && !isStandaloneApp());
+}
+
+function isStandaloneApp() {
+  return Boolean(window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone);
 }
 
 function formatDuration(minutes) {
