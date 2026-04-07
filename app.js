@@ -777,7 +777,7 @@ function renderWorkoutExercise(entry) {
         </div>
         <div class="row-wrap compact-row">
           <button class="ghost" data-action="toggle-workout-entry" data-exercise-id="${entry.exerciseId}" type="button">${isCollapsed ? "Развернуть" : "Свернуть"}</button>
-          <button class="danger square" data-action="remove-workout-exercise" data-exercise-id="${entry.exerciseId}" type="button">X</button>
+          <button class="danger" data-action="remove-workout-exercise" data-exercise-id="${entry.exerciseId}" type="button">Удалить</button>
         </div>
       </div>
       ${isCollapsed
@@ -825,7 +825,7 @@ function renderSetRow(exerciseId, set, index) {
         </div>
         <input data-set-input="1" data-field="reps" data-exercise-id="${exerciseId}" data-set-id="${set.id}" inputmode="numeric" type="number" min="0" step="1" value="${escapeHtml(String(set.reps ?? ""))}">
       </label>
-      <button class="danger" data-action="remove-set" data-exercise-id="${exerciseId}" data-set-id="${set.id}" type="button">Удалить</button>
+      <button class="danger square" data-action="remove-set" data-exercise-id="${exerciseId}" data-set-id="${set.id}" type="button">X</button>
     </div>
   `;
 }
