@@ -768,12 +768,12 @@ function renderWorkoutExercise(entry) {
   const validSets = entry.sets.filter(hasSetData);
 
   return `
-    <article class="card stack ${isCollapsed ? "collapsed-workout-card" : ""}">
+    <article class="card stack ${isCollapsed ? "collapsed-workout-card" : ""}" data-workout-entry="${entry.exerciseId}">
       <div class="title-row">
         <div class="stack compact-gap">
           <h3>${escapeHtml(entry.exerciseName)}</h3>
           <span class="badge">${exerciseGroup}</span>
-          <span class="muted">${renderExerciseSummary(entry)}</span>
+          <span class="muted" data-summary-exercise-id="${entry.exerciseId}">${renderExerciseSummary(entry)}</span>
         </div>
         <div class="row-wrap compact-row">
           <button class="ghost" data-action="toggle-workout-entry" data-exercise-id="${entry.exerciseId}" type="button">${isCollapsed ? "Развернуть" : "Свернуть"}</button>
@@ -902,6 +902,9 @@ function applyPendingFocus() {
 
   const { exerciseId, setId, field } = state.pendingFocus;
   requestAnimationFrame(() => {
+    const entryCard = document.querySelector(`[data-workout-entry="${exerciseId}"]`);
+    entryCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+
     const selector = `[data-set-input="1"][data-exercise-id="${exerciseId}"][data-set-id="${setId}"][data-field="${field}"]`;
     const input = document.querySelector(selector);
     if (input) {
@@ -1012,7 +1015,7 @@ function renderExerciseSummary(entry) {
 
 function updateExerciseSummary(exerciseId) {
   const entry = state.activeSession?.entries.find((item) => item.exerciseId === exerciseId);
-  const target = document.querySelector(`#summary-${CSS.escape(exerciseId)}`);
+  const target = document.querySelector(`[data-summary-exercise-id="${exerciseId}"]`);
   if (entry && target) {
     target.innerHTML = renderExerciseSummary(entry);
   }
