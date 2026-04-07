@@ -86,7 +86,7 @@ h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1; }
 }
 
 .card {
-  padding: 18px;
+  padding: 14px;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(12px);
@@ -122,8 +122,8 @@ h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1; }
 .muted { color: var(--muted); }
 
 .primary, .secondary, .ghost, .danger {
-  min-height: 46px;
-  padding: 0 16px;
+  min-height: 42px;
+  padding: 0 14px;
   border-radius: 14px;
 }
 
@@ -148,8 +148,8 @@ label {
 
 input, select {
   width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
+  min-height: 40px;
+  padding: 0 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
@@ -157,7 +157,7 @@ input, select {
 }
 
 .item {
-  padding: 14px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface-strong);
@@ -185,12 +185,12 @@ input, select {
 .set-row {
   display: grid;
   grid-template-columns: 56px 1fr 1fr auto;
-  gap: 8px;
+  gap: 6px;
   align-items: end;
 }
 
 .set-index {
-  min-height: 44px;
+  min-height: 40px;
   display: grid;
   place-items: center;
   border-radius: 14px;
@@ -256,8 +256,8 @@ input, select {
 }
 
 .quick-chip {
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 28px;
+  padding: 0 9px;
   border-radius: 999px;
 }
 
