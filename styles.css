@@ -313,11 +313,20 @@ input, select {
 @media (max-width: 420px) {
   .app-shell { padding-left: 12px; padding-right: 12px; }
   .grid-2, .summary-grid { grid-template-columns: 1fr; }
-  .set-row { grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr) 40px; }
+  .set-row { grid-template-columns: 36px minmax(0, 0.92fr) minmax(0, 0.92fr) 36px; }
+  .set-row input {
+    min-height: 36px;
+    padding: 0 8px;
+  }
+  .set-row label {
+    gap: 4px;
+    font-size: 0.86rem;
+  }
   .set-row .square {
     grid-column: auto;
-    min-width: 40px;
-    width: 40px;
+    min-width: 36px;
+    width: 36px;
+    min-height: 36px;
     justify-self: end;
   }
 }
