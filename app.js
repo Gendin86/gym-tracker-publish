@@ -38,7 +38,9 @@ async function init() {
   await loadState();
   bindGlobalEvents();
   render();
-  registerServiceWorker();
+  if (!isNativeApp()) {
+    registerServiceWorker();
+  }
 }
 
 function bindGlobalEvents() {
@@ -467,14 +469,6 @@ function renderHome() {
           <p class="muted">Завершено тренировок</p>
           <h3>${completed.length}</h3>
         </article>
-        <article class="summary-tile">
-          <p class="muted">Упражнений в базе</p>
-          <h3>${state.exercises.length}</h3>
-        </article>
-        <article class="summary-tile">
-          <p class="muted">Активная сессия</p>
-          <h3>${state.activeSession ? "Да" : "Нет"}</h3>
-        </article>
       </section>
 
       <section class="card stack">
@@ -597,21 +591,6 @@ function bindWorkoutEvents() {
         setId: newSet.id,
         field: "weight",
       };
-      await persistActiveSession();
-      renderWorkout();
-    });
-  });
-
-  app.querySelectorAll("[data-action='copy-history']").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const history = findExerciseHistory(button.dataset.exerciseId);
-      if (!history) return;
-      const entry = state.activeSession.entries.find((item) => item.exerciseId === button.dataset.exerciseId);
-      entry.sets = history.sets.map((set) => ({
-        id: crypto.randomUUID(),
-        weight: set.weight,
-        reps: set.reps,
-      }));
       await persistActiveSession();
       renderWorkout();
     });
@@ -794,18 +773,15 @@ function renderWorkoutExercise(entry) {
         <div class="stack compact-gap">
           <h3>${escapeHtml(entry.exerciseName)}</h3>
           <span class="badge">${exerciseGroup}</span>
+          <span class="muted">${renderExerciseSummary(entry)}</span>
         </div>
         <div class="row-wrap compact-row">
           <button class="ghost" data-action="toggle-workout-entry" data-exercise-id="${entry.exerciseId}" type="button">${isCollapsed ? "Развернуть" : "Свернуть"}</button>
-          ${lastHistory ? `<button class="ghost" data-action="copy-history" data-exercise-id="${entry.exerciseId}" type="button">Копировать прошлый раз</button>` : ""}
-          <button class="danger" data-action="remove-workout-exercise" data-exercise-id="${entry.exerciseId}" type="button">Удалить упражнение</button>
+          <button class="danger" data-action="remove-workout-exercise" data-exercise-id="${entry.exerciseId}" type="button">Удалить</button>
         </div>
       </div>
       ${isCollapsed
         ? `
-          <div class="item summary-inline" id="summary-${entry.exerciseId}">
-            ${renderExerciseSummary(entry)}
-          </div>
           <div class="item stack compact-gap">
             <span class="muted">${validSets.length ? validSets.map((set) => `${set.weight || 0} кг x ${set.reps || 0}`).join(", ") : "Подходы пока не заполнены."}</span>
           </div>
@@ -825,9 +801,6 @@ function renderWorkoutExercise(entry) {
 
           <div class="set-list">
             ${entry.sets.map((set, index) => renderSetRow(entry.exerciseId, set, index)).join("") || renderEmpty("Добавьте первый подход.")}
-          </div>
-          <div class="item summary-inline" id="summary-${entry.exerciseId}">
-            ${renderExerciseSummary(entry)}
           </div>
           <button class="secondary full" data-action="add-set" data-exercise-id="${entry.exerciseId}" type="button">Добавить подход</button>
         `}
@@ -852,7 +825,7 @@ function renderSetRow(exerciseId, set, index) {
         </div>
         <input data-set-input="1" data-field="reps" data-exercise-id="${exerciseId}" data-set-id="${set.id}" inputmode="numeric" type="number" min="0" step="1" value="${escapeHtml(String(set.reps ?? ""))}">
       </label>
-      <button class="danger" data-action="remove-set" data-exercise-id="${exerciseId}" data-set-id="${set.id}" type="button">Удалить</button>
+      <button class="danger square" data-action="remove-set" data-exercise-id="${exerciseId}" data-set-id="${set.id}" type="button">X</button>
     </div>
   `;
 }
@@ -1034,10 +1007,7 @@ function renderExerciseSummary(entry) {
     return sum + Number(set.weight || 0) * Number(set.reps || 0);
   }, 0);
 
-  return `
-    <p><strong>Подходов:</strong> ${validSets.length}</p>
-    <p class="muted">Тоннаж: ${volume}</p>
-  `;
+  return `${validSets.length} подходов · тоннаж ${volume}`;
 }
 
 function updateExerciseSummary(exerciseId) {
@@ -1778,6 +1748,7 @@ function getDateTimeParts(value) {
 }
 
 function shouldShowIosInstallHelp() {
+  if (isNativeApp()) return false;
   const ua = navigator.userAgent || "";
   const isIos = /iPhone|iPad|iPod/i.test(ua);
   const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|YaBrowser/i.test(ua);
@@ -1785,7 +1756,15 @@ function shouldShowIosInstallHelp() {
 }
 
 function isStandaloneApp() {
-  return Boolean(window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone);
+  return Boolean(isNativeApp() || window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone);
+}
+
+function isNativeApp() {
+  return Boolean(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === "capacitor:" ||
+    window.location.protocol === "file:",
+  );
 }
 
 function isIosSafari() {
@@ -1827,6 +1806,7 @@ function escapeHtml(value) {
 }
 
 async function registerServiceWorker() {
+  if (isNativeApp()) return;
   if (!("serviceWorker" in navigator)) return;
   try {
     await navigator.serviceWorker.register("./sw.js");
