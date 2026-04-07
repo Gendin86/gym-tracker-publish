@@ -315,4 +315,10 @@ input, select {
   .grid-2, .summary-grid { grid-template-columns: 1fr; }
   .set-row { grid-template-columns: 46px 1fr 1fr; }
   .set-row .danger { grid-column: 1 / -1; }
+  .set-row .square {
+    grid-column: auto;
+    min-width: 40px;
+    width: 40px;
+    justify-self: end;
+  }
 }
